@@ -29,21 +29,27 @@ Su propósito es actuar como núcleo relacional dentro de una arquitectura híbr
 .
 moodtune/
 ├─ moodtune_api/
-│  ├─ __init__.py           # app factory y registro de blueprints
+│  ├─ __init__.py               # app factory y registro de blueprints
 │  ├─ src/
-│  │  ├─ config.py             # config central (DB, pool, flags)
-│  │  ├─ db.py                 # pool MySQL y helpers de conexión
-│  │  └─ utils.py              # validación UUID, parsing fechas, helpers
+│  │  ├─ config.py              # config central (DB, pool, flags)
+│  │  ├─ db.py                  # pool MySQL y helpers de conexión
+│  │  └─ utils.py               # validación UUID, parsing fechas, helpers
 │  └─ routes/
-│     ├─ users.py
-│     ├─ sessions.py
-│     ├─ inferences.py
-│     ├─ playlists.py
-│     ├─ mood_map_rules.py
-│     ├─ audit_logs.py
-│     └─ oauth_tokens.py
-├─ run.py                   # punto de entrada
-└─ requirements.txt
+│     ├─ users.py               # Servicios Web para la tabla de usuarios
+│     ├─ sessions.py            # Servicios Web para la tabla de sesiones
+│     ├─ inferences.py          # Servicios Web para la tabla de inferencias
+│     ├─ playlists.py           # Servicios Web para la tabla de playlists
+│     ├─ mood_map_rules.py      # Servicios Web para la tabla de mapeo de estado de animo
+│     ├─ audit_logs.py          # Servicios Web para la tabla de logs de auditoria
+│     └─ oauth_tokens.py        # Servicios Web para la tabla de tokens oauth
+├─ run.py                       # punto de entrada Flask (usa create_app)
+├─ requirements.txt             # Librerias necesarias para el proyecto
+├─ Dockerfile                   # Archivo Dockerfile
+├─ docker-compose.yml           # Archivo Docker compose
+├─ .dockerignore                # Archivo Dockerignore
+└─ db/
+   ├─ 00-create-db-and-user.sql # Scirpt SQL para crear base de datos y usuario
+   └─ 01-schema.sql             # Script SQL para crear esquema de las tablas de base de datos
 ```
 
 ## Requisitos

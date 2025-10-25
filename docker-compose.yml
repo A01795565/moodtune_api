@@ -3,14 +3,14 @@ version: "3.9"
 services:
   db:
     image: mysql:8.0
-    container_name: moodtune_db
+    container_name: ${DB_CONTAINER_NAME}
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       # Opcional: Precrea DB vacía; igual ejecutamos scripts
-      MYSQL_DATABASE: moodtune
+      MYSQL_DATABASE: ${DB_NAME}
     ports:
-      - "3310:3306"
+      - "${DB_PORT_HOST}:${DB_PORT}"
     volumes:
       - db_data:/var/lib/mysql
       - ./db/00-create-db-and-user.sql:/docker-entrypoint-initdb.d/00-create-db-and-user.sql:ro
@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: moodtune_api
+    container_name: ${API_CONTAINER_NAME}
     restart: unless-stopped
     depends_on:
       db:
@@ -33,14 +33,14 @@ services:
     environment:
       # Estas variables las lee tu app/config.py
       DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: moodTuneTest
-      DB_PASSWORD: StrongPassword123!
-      DB_NAME: moodtune
-      DEBUG: "false"
-      ALLOW_AUDIT_DELETE: "false"
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DEBUG: ${DEBUG}
+      ALLOW_AUDIT_DELETE: ${ALLOW_AUDIT_DELETE}
     ports:
-      - "8000:8000"
+      - "${API_PORT_HOST}:${API_PORT}"
 
 volumes:
   db_data:

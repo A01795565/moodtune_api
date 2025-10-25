@@ -22,12 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
 
 # Variables de entorno por defecto (se pueden sobreescribir en compose)
-ENV DB_HOST=db \
-    DB_PORT=3306 \
-    DB_USER=moodTuneTest \
-    DB_PASSWORD=StrongPassword123! \
-    DB_NAME=moodtune \
-    DEBUG=false
+#ENV DB_HOST=db \  
+#    DEBUG=false
 
 # Exponer puerto del servicio
 EXPOSE 8000

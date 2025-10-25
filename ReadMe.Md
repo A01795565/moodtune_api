@@ -104,3 +104,13 @@ docker compose logs -f api
 # Detener Docker
 docker compose down
 ```
+
+### Acceso a la Base de Datos
+```bash
+# Conexión desde tu máquina host
+mysql -h 127.0.0.1 -P 3310 -u moodTuneTest -p
+
+# Conexión desde dentro del contenedor api
+docker exec -it moodtune_api bash
+mysql -h db -P 3306 -u moodTuneTest -p
+```

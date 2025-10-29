@@ -47,9 +47,14 @@ moodtune/
 ├─ Dockerfile                   # Archivo Dockerfile
 ├─ docker-compose.yml           # Archivo Docker compose
 ├─ .dockerignore                # Archivo Dockerignore
+├─ docs/
+│  └─ openapi/
+│     ├─ moodtune.yaml          # OpenAPI 3.0.3  
+│     └─ postman_collection.json
 └─ db/
    ├─ 00-create-db-and-user.sql # Scirpt SQL para crear base de datos y usuario
    └─ 01-schema.sql             # Script SQL para crear esquema de las tablas de base de datos
+
 ```
 
 ## Requisitos

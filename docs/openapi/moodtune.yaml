@@ -1,0 +1,876 @@
+openapi: 3.0.3
+info:
+  title: MoodTune API
+  version: "1.0.0"
+  description: |
+    API REST del proyecto **MoodTune**. Provee servicios para:
+    - Gestión de usuarios y sesiones
+    - Registro de inferencias (FER)
+    - Generación y consulta de playlists
+    - Reglas de mapeo emoción→parámetros musicales
+    - Auditoría de acciones
+    - Gestión segura de tokens OAuth de proveedores musicales
+
+    Arquitectura objetivo: núcleo relacional (RDBMS) + perímetro efímero BaaS/objeto.
+  termsOfService: https://moodtune.com/terms
+  contact:
+    name: Equipo 26 — MoodTune
+    url: https://moodtune.com/moodtune
+    email: equipo26@moodtune.com
+
+servers:
+  - url: https://api.moodtune.com/v1
+    description: Entorno de Producción
+  - url: http://localhost:8000
+    description: Entorno local de desarrollo
+
+# Seguridad global: todas las operaciones requieren Bearer JWT,
+# salvo aquellas que hagan override con security: []
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Health
+  - name: Users
+  - name: Sessions
+  - name: Inferences
+  - name: Playlists
+  - name: MoodMapRules
+  - name: AuditLogs
+  - name: OAuthTokens
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Verificación de salud del servicio
+      operationId: healthCheck
+      # Este endpoint es público (sin autenticación)
+      security: []
+      responses:
+        "200":
+          description: Servicio operativo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              examples: { ok: { value: { status: ok } } }
+        "500":
+          description: Error de conectividad con la base de datos u otra dependencia
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /users:
+    post:
+      tags: [Users]
+      summary: Crear usuario
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserCreate" }
+            examples:
+              default:
+                value: { display_name: "Ramiro G.", email_hash: "b1946ac92492d2347c6235b4d2611184" }
+      responses:
+        "201": { description: Usuario creado, content: { application/json: { schema: { $ref: "#/components/schemas/User" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    get:
+      tags: [Users]
+      summary: Listar usuarios
+      operationId: listUsers
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200": { description: Lista paginada de usuarios, content: { application/json: { schema: { $ref: "#/components/schemas/PaginatedUsers" } } } }
+        "400": { description: Parámetros inválidos, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Obtener usuario por ID
+      operationId: getUser
+      parameters: [ { $ref: "#/components/parameters/UserId" } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/User" } } } }
+        "404": { description: Usuario no encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    patch:
+      tags: [Users]
+      summary: Actualizar parcialmente un usuario
+      operationId: patchUser
+      parameters: [ { $ref: "#/components/parameters/UserId" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UserUpdate" } } }
+      responses:
+        "200": { description: Actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAck" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { description: Usuario no encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [Users]
+      summary: Eliminar usuario
+      operationId: deleteUser
+      parameters: [ { $ref: "#/components/parameters/UserId" } ]
+      responses:
+        "200": { description: Eliminado, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
+        "404": { description: Usuario no encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /sessions:
+    post:
+      tags: [Sessions]
+      summary: Crear sesión
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SessionCreate" }
+            examples:
+              default: { value: { user_id: "7ea2d78c-7c9f-4b37-8ad8-1d8a9c5d1f0a", device_info: "Chrome/Win", ip_hash: "abc123" } }
+      responses:
+        "201": { description: Sesión creada, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    get:
+      tags: [Sessions]
+      summary: Listar sesiones
+      operationId: listSessions
+      parameters: [ { $ref: "#/components/parameters/Limit" }, { $ref: "#/components/parameters/Offset" } ]
+      responses:
+        "200": { description: Lista paginada de sesiones, content: { application/json: { schema: { $ref: "#/components/schemas/PaginatedSessions" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      summary: Obtener sesión por ID
+      operationId: getSession
+      parameters: [ { $ref: "#/components/parameters/SessionId" } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "404": { description: Sesión no encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    patch:
+      tags: [Sessions]
+      summary: Actualizar parcialmente sesión (terminar o modificar metadatos)
+      operationId: patchSession
+      parameters: [ { $ref: "#/components/parameters/SessionId" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SessionUpdate" } } }
+      responses:
+        "200": { description: Actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAck" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { description: Sesión no encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [Sessions]
+      summary: Eliminar sesión
+      operationId: deleteSession
+      parameters: [ { $ref: "#/components/parameters/SessionId" } ]
+      responses:
+        "200": { description: Eliminada, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
+        "404": { description: Sesión no encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /inferences:
+    post:
+      tags: [Inferences]
+      summary: Registrar inferencia (FER)
+      operationId: createInference
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/InferenceCreate" } } }
+      responses:
+        "201": { description: Inferencia creada, content: { application/json: { schema: { $ref: "#/components/schemas/Inference" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    get:
+      tags: [Inferences]
+      summary: Listar inferencias
+      operationId: listInferences
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: session_id
+          in: query
+          description: Filtra por sesión
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Lista paginada de inferencias, content: { application/json: { schema: { $ref: "#/components/schemas/PaginatedInferences" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /inferences/{inferenceId}:
+    get:
+      tags: [Inferences]
+      summary: Obtener inferencia por ID
+      operationId: getInference
+      parameters: [ { $ref: "#/components/parameters/InferenceId" } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Inference" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    patch:
+      tags: [Inferences]
+      summary: Actualizar parcialmente inferencia
+      operationId: patchInference
+      parameters: [ { $ref: "#/components/parameters/InferenceId" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/InferenceUpdate" } } }
+      responses:
+        "200": { description: Actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAck" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [Inferences]
+      summary: Eliminar inferencia
+      operationId: deleteInference
+      parameters: [ { $ref: "#/components/parameters/InferenceId" } ]
+      responses:
+        "200": { description: Eliminada, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /playlists:
+    post:
+      tags: [Playlists]
+      summary: Crear playlist
+      operationId: createPlaylist
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PlaylistCreate" } } }
+      responses:
+        "201": { description: Playlist creada, content: { application/json: { schema: { $ref: "#/components/schemas/Playlist" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    get:
+      tags: [Playlists]
+      summary: Listar playlists
+      operationId: listPlaylists
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: user_id
+          in: query
+          required: false
+          description: Filtra por usuario
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Lista paginada de playlists, content: { application/json: { schema: { $ref: "#/components/schemas/PaginatedPlaylists" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /playlists/{playlistId}:
+    get:
+      tags: [Playlists]
+      summary: Obtener playlist por ID
+      operationId: getPlaylist
+      parameters: [ { $ref: "#/components/parameters/PlaylistId" } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Playlist" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    patch:
+      tags: [Playlists]
+      summary: Actualizar parcialmente playlist
+      operationId: patchPlaylist
+      parameters: [ { $ref: "#/components/parameters/PlaylistId" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PlaylistUpdate" } } }
+      responses:
+        "200": { description: Actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAck" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [Playlists]
+      summary: Eliminar playlist
+      operationId: deletePlaylist
+      parameters: [ { $ref: "#/components/parameters/PlaylistId" } ]
+      responses:
+        "200": { description: Eliminada, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /mood-map-rules:
+    post:
+      tags: [MoodMapRules]
+      summary: Crear regla de mapeo emoción→parámetros musicales
+      operationId: createMoodMapRule
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/MoodMapRuleCreate" } } }
+      responses:
+        "201": { description: Regla creada, content: { application/json: { schema: { $ref: "#/components/schemas/MoodMapRule" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    get:
+      tags: [MoodMapRules]
+      summary: Listar reglas de mapeo
+      operationId: listMoodMapRules
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: emotion
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/Emotion" }
+        - name: intention
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/Intention" }
+      responses:
+        "200": { description: Lista paginada de reglas, content: { application/json: { schema: { $ref: "#/components/schemas/PaginatedMoodMapRules" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /mood-map-rules/{ruleId}:
+    get:
+      tags: [MoodMapRules]
+      summary: Obtener regla por ID
+      operationId: getMoodMapRule
+      parameters: [ { $ref: "#/components/parameters/RuleId" } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MoodMapRule" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    patch:
+      tags: [MoodMapRules]
+      summary: Actualizar parcialmente regla
+      operationId: patchMoodMapRule
+      parameters: [ { $ref: "#/components/parameters/RuleId" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/MoodMapRuleUpdate" } } }
+      responses:
+        "200": { description: Actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAck" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [MoodMapRules]
+      summary: Eliminar regla
+      operationId: deleteMoodMapRule
+      parameters: [ { $ref: "#/components/parameters/RuleId" } ]
+      responses:
+        "200": { description: Eliminada, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
+        "404": { description: No encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /audit-logs:
+    post:
+      tags: [AuditLogs]
+      summary: Crear registro de auditoría
+      operationId: createAuditLog
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AuditLogCreate" } } }
+      responses:
+        "201": { description: Creado, content: { application/json: { schema: { $ref: "#/components/schemas/AuditLog" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    get:
+      tags: [AuditLogs]
+      summary: Listar auditorías
+      operationId: listAuditLogs
+      parameters: [ { $ref: "#/components/parameters/Limit" }, { $ref: "#/components/parameters/Offset" } ]
+      responses:
+        "200": { description: Lista paginada, content: { application/json: { schema: { $ref: "#/components/schemas/PaginatedAuditLogs" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /audit-logs/{auditId}:
+    get:
+      tags: [AuditLogs]
+      summary: Obtener registro de auditoría por ID
+      operationId: getAuditLog
+      parameters: [ { $ref: "#/components/parameters/AuditId" } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuditLog" } } } }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    patch:
+      tags: [AuditLogs]
+      summary: Actualizar parcialmente un registro de auditoría
+      operationId: patchAuditLog
+      parameters: [ { $ref: "#/components/parameters/AuditId" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AuditLogUpdate" } } }
+      responses:
+        "200": { description: Actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAck" } } } }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [AuditLogs]
+      summary: Eliminar registro de auditoría
+      operationId: deleteAuditLog
+      parameters: [ { $ref: "#/components/parameters/AuditId" } ]
+      responses:
+        "200": { description: Eliminado, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /oauth-tokens:
+    post:
+      tags: [OAuthTokens]
+      summary: Crear o reemplazar token OAuth (upsert por user_id + provider)
+      operationId: upsertOAuthToken
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OAuthTokenUpsert" } } }
+      responses:
+        "201": { description: Token creado/actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/OAuthToken" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    get:
+      tags: [OAuthTokens]
+      summary: Listar tokens
+      operationId: listOAuthTokens
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: user_id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: provider
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/MusicProvider" }
+      responses:
+        "200": { description: Lista paginada, content: { application/json: { schema: { $ref: "#/components/schemas/PaginatedOAuthTokens" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /oauth-tokens/{tokenId}:
+    get:
+      tags: [OAuthTokens]
+      summary: Obtener token por ID
+      operationId: getOAuthToken
+      parameters: [ { $ref: "#/components/parameters/TokenId" } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OAuthToken" } } } }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    patch:
+      tags: [OAuthTokens]
+      summary: Actualizar parcialmente token
+      operationId: patchOAuthToken
+      parameters: [ { $ref: "#/components/parameters/TokenId" } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OAuthTokenUpdate" } } }
+      responses:
+        "200": { description: Actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAck" } } } }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [OAuthTokens]
+      summary: Eliminar token
+      operationId: deleteOAuthToken
+      parameters: [ { $ref: "#/components/parameters/TokenId" } ]
+      responses:
+        "200": { description: Eliminado, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
+        "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Tamaño de página (1-100)
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Offset:
+      name: offset
+      in: query
+      description: Desplazamiento inicial (>=0)
+      required: false
+      schema: { type: integer, minimum: 0, default: 0 }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Identificador de usuario
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Identificador de sesión
+    InferenceId:
+      name: inferenceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Identificador de inferencia
+    PlaylistId:
+      name: playlistId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Identificador de playlist
+    RuleId:
+      name: ruleId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Identificador de regla
+    AuditId:
+      name: auditId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+      description: Identificador incremental de auditoría
+    TokenId:
+      name: tokenId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Identificador de token
+
+  schemas:
+    Emotion:
+      type: string
+      description: Emoción detectada
+      enum: [joy, sadness, anger]
+    Intention:
+      type: string
+      description: Intención del usuario frente a su estado
+      enum: [maintain, change]
+    MusicProvider:
+      type: string
+      description: Proveedor musical
+      enum: [spotify, apple_music, amazon_music]
+
+    Error:
+      type: object
+      properties:
+        error: { type: string, description: Descripción del error }
+        detail: { type: string, description: Detalle técnico adicional }
+      required: [error]
+
+    UpdateAck:
+      type: object
+      properties:
+        updated: { type: boolean }
+        id: { type: string, description: "ID afectado (si aplica)" }
+
+    DeleteAck:
+      type: object
+      properties:
+        deleted: { type: boolean }
+        id: { type: string, description: "ID eliminado (si aplica)" }
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+
+    # Users
+    UserBase:
+      type: object
+      properties:
+        display_name: { type: string, description: Nombre visible del usuario, maxLength: 120 }
+        email_hash: { type: string, description: Hash del email, maxLength: 64 }
+    UserCreate:
+      allOf: [ { $ref: "#/components/schemas/UserBase" } ]
+    UserUpdate:
+      type: object
+      description: Campos editables del usuario
+      properties:
+        display_name: { type: string, maxLength: 120 }
+        email_hash: { type: string, maxLength: 64 }
+    User:
+      allOf:
+        - $ref: "#/components/schemas/UserBase"
+        - type: object
+          properties:
+            user_id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+          required: [user_id, created_at, updated_at]
+    PaginatedUsers:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/User" } }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # Sessions
+    SessionBase:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid, description: Usuario asociado (opcional) }
+        device_info: { type: string, maxLength: 200 }
+        ip_hash: { type: string, maxLength: 64 }
+    SessionCreate:
+      allOf: [ { $ref: "#/components/schemas/SessionBase" } ]
+    SessionUpdate:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        device_info: { type: string, maxLength: 200 }
+        ip_hash: { type: string, maxLength: 64 }
+        end:
+          type: boolean
+          description: Si es true, termina la sesión (ended_at = now)
+        ended_at:
+          type: string
+          format: date-time
+          description: Fecha de cierre explícita
+          nullable: true
+    Session:
+      allOf:
+        - $ref: "#/components/schemas/SessionBase"
+        - type: object
+          properties:
+            session_id: { type: string, format: uuid }
+            started_at: { type: string, format: date-time }
+            ended_at: { type: string, format: date-time, nullable: true }
+          required: [session_id, started_at]
+    PaginatedSessions:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Session" } }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # Inferences
+    InferenceBase:
+      type: object
+      properties:
+        session_id: { type: string, format: uuid }
+        emotion: { $ref: "#/components/schemas/Emotion" }
+        confidence: { type: number, format: float, minimum: 0, maximum: 1 }
+        intention: { $ref: "#/components/schemas/Intention" }
+        latency_ms: { type: integer, minimum: 0 }
+        model_version: { type: string, maxLength: 50 }
+    InferenceCreate:
+      allOf: [ { $ref: "#/components/schemas/InferenceBase" } ]
+      required: [session_id, emotion, confidence]
+    InferenceUpdate:
+      type: object
+      properties:
+        emotion: { $ref: "#/components/schemas/Emotion" }
+        confidence: { type: number, format: float, minimum: 0, maximum: 1 }
+        intention: { $ref: "#/components/schemas/Intention" }
+        latency_ms: { type: integer, minimum: 0 }
+        model_version: { type: string, maxLength: 50 }
+    Inference:
+      allOf:
+        - $ref: "#/components/schemas/InferenceBase"
+        - type: object
+          properties:
+            inference_id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+          required: [inference_id, created_at]
+    PaginatedInferences:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Inference" } }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # Playlists
+    PlaylistBase:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        provider: { $ref: "#/components/schemas/MusicProvider" }
+        external_playlist_id: { type: string, maxLength: 128 }
+        deep_link_url: { type: string, format: uri }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 500 }
+    PlaylistCreate:
+      allOf: [ { $ref: "#/components/schemas/PlaylistBase" } ]
+      required: [user_id, provider, external_playlist_id, deep_link_url]
+    PlaylistUpdate:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/MusicProvider" }
+        external_playlist_id: { type: string, maxLength: 128 }
+        deep_link_url: { type: string, format: uri }
+        title: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 500 }
+    Playlist:
+      allOf:
+        - $ref: "#/components/schemas/PlaylistBase"
+        - type: object
+          properties:
+            playlist_id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+          required: [playlist_id, created_at]
+    PaginatedPlaylists:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Playlist" } }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # Mood Map Rules
+    MoodMapRuleBase:
+      type: object
+      properties:
+        emotion: { $ref: "#/components/schemas/Emotion" }
+        intention: { $ref: "#/components/schemas/Intention" }
+        version: { type: integer, minimum: 1, default: 1 }
+        params_json: { type: object, description: Parámetros de mapeo, additionalProperties: true }
+        is_active: { type: boolean, default: true }
+        valid_from: { type: string, format: date-time }
+        valid_to: { type: string, format: date-time, nullable: true }
+    MoodMapRuleCreate:
+      allOf: [ { $ref: "#/components/schemas/MoodMapRuleBase" } ]
+      required: [emotion, intention, params_json]
+    MoodMapRuleUpdate:
+      type: object
+      properties:
+        emotion: { $ref: "#/components/schemas/Emotion" }
+        intention: { $ref: "#/components/schemas/Intention" }
+        version: { type: integer, minimum: 1 }
+        params_json: { type: object, additionalProperties: true }
+        is_active: { type: boolean }
+        valid_from: { type: string, format: date-time }
+        valid_to: { type: string, format: date-time, nullable: true }
+    MoodMapRule:
+      allOf:
+        - $ref: "#/components/schemas/MoodMapRuleBase"
+        - type: object
+          properties:
+            rule_id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+          required: [rule_id, created_at]
+    PaginatedMoodMapRules:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/MoodMapRule" } }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # Audit Logs
+    AuditLogBase:
+      type: object
+      properties:
+        actor_type: { type: string, enum: [system, user] }
+        actor_id: { type: string, format: uuid, nullable: true }
+        action: { type: string, maxLength: 80 }
+        entity_type: { type: string, maxLength: 80, nullable: true }
+        entity_id: { type: string, maxLength: 64, nullable: true }
+        payload_json: { type: object, additionalProperties: true, nullable: true }
+    AuditLogCreate:
+      allOf: [ { $ref: "#/components/schemas/AuditLogBase" } ]
+      required: [actor_type, action]
+    AuditLogUpdate:
+      type: object
+      properties:
+        actor_type: { type: string, enum: [system, user] }
+        actor_id: { type: string, format: uuid, nullable: true }
+        action: { type: string, maxLength: 80 }
+        entity_type: { type: string, maxLength: 80, nullable: true }
+        entity_id: { type: string, maxLength: 64, nullable: true }
+        payload_json: { type: object, additionalProperties: true, nullable: true }
+    AuditLog:
+      allOf:
+        - $ref: "#/components/schemas/AuditLogBase"
+        - type: object
+          properties:
+            audit_id: { type: integer, minimum: 1 }
+            created_at: { type: string, format: date-time }
+          required: [audit_id, created_at]
+    PaginatedAuditLogs:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AuditLog" } }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    # OAuth Tokens
+    OAuthTokenBase:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        provider: { $ref: "#/components/schemas/MusicProvider" }
+        expires_at: { type: string, format: date-time, nullable: true }
+    OAuthTokenUpsert:
+      allOf:
+        - $ref: "#/components/schemas/OAuthTokenBase"
+        - type: object
+          properties:
+            token_id: { type: string, format: uuid }
+            access_cipher_b64: { type: string, description: Ciphertext en Base64 (cifrado en app) }
+            refresh_cipher_b64: { type: string, description: Ciphertext en Base64 (cifrado en app), nullable: true }
+          required: [user_id, provider, access_cipher_b64]
+    OAuthTokenUpdate:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/MusicProvider" }
+        access_cipher_b64: { type: string }
+        refresh_cipher_b64: { type: string, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+    OAuthToken:
+      allOf:
+        - $ref: "#/components/schemas/OAuthTokenBase"
+        - type: object
+          properties:
+            token_id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+          required: [token_id, created_at, updated_at]
+    PaginatedOAuthTokens:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/OAuthToken" } }
+        limit: { type: integer }
+        offset: { type: integer }

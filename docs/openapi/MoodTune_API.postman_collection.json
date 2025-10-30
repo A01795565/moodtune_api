@@ -1,0 +1,989 @@
+{
+  "info": {
+    "_postman_id": "911f660f-5d3a-4b89-b879-4a34306b6427",
+    "name": "MoodTune API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for MoodTune API (Flask + MySQL)."
+  },
+  "item": [
+    {
+      "name": "Health - Check",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "description": "Service health check"
+      }
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"7ea2d78c-7c9f-4b37-8ad8-1d8a9c5d1f0a\",\n  \"display_name\": \"Ramiro G.\",\n  \"email_hash\": \"abc123hash\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users?limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update User (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Ramiro Gonz\\u00e1lez\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sessions",
+      "item": [
+        {
+          "name": "Create Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sessions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"a1b2c3d4-1111-2222-3333-444455556666\",\n  \"user_id\": \"7ea2d78c-7c9f-4b37-8ad8-1d8a9c5d1f0a\",\n  \"device_info\": \"Chrome/Win\",\n  \"ip_hash\": \"abc123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sessions?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sessions?limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Session by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sessions",
+                "{{session_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "End Session (PATCH end=true)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sessions",
+                "{{session_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"end\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Session (PATCH ended_at)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sessions",
+                "{{session_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ended_at\": \"2025-10-23 12:00:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sessions",
+                "{{session_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inferences",
+      "item": [
+        {
+          "name": "Create Inference",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/inferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "inferences"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inference_id\": \"b1b2c3d4-aaaa-bbbb-cccc-111122223333\",\n  \"session_id\": \"a1b2c3d4-1111-2222-3333-444455556666\",\n  \"emotion\": \"joy\",\n  \"confidence\": 0.91,\n  \"intention\": \"maintain\",\n  \"latency_ms\": 420,\n  \"model_version\": \"fer-0.2.1\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Inferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/inferences?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "inferences?limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Inferences by Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/inferences?session_id={{session_id}}&limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "inferences?session_id={{session_id}}&limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Inference by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/inferences/{{inference_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "inferences",
+                "{{inference_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Inference (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/inferences/{{inference_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "inferences",
+                "{{inference_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emotion\": \"sadness\",\n  \"confidence\": 0.82\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Inference",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/inferences/{{inference_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "inferences",
+                "{{inference_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Playlists",
+      "item": [
+        {
+          "name": "Create Playlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/playlists",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "playlists"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playlist_id\": \"c1c2c3d4-eeee-ffff-0000-999988887777\",\n  \"user_id\": \"7ea2d78c-7c9f-4b37-8ad8-1d8a9c5d1f0a\",\n  \"provider\": \"spotify\",\n  \"external_playlist_id\": \"37i9dQZF1DXcBWIGoYBM5M\",\n  \"deep_link_url\": \"https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M\",\n  \"title\": \"MoodTune Joy Mix\",\n  \"description\": \"Auto-generated playlist based on emotion analysis.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Playlists",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/playlists?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "playlists?limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Playlists by User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/playlists?user_id={{user_id}}&limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "playlists?user_id={{user_id}}&limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Playlist by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/playlists/{{playlist_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "playlists",
+                "{{playlist_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Playlist (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/playlists/{{playlist_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "playlists",
+                "{{playlist_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"MoodTune Joy Mix v2\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Playlist",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/playlists/{{playlist_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "playlists",
+                "{{playlist_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mood Map Rules",
+      "item": [
+        {
+          "name": "Create Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mood-map-rules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mood-map-rules"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rule_id\": \"r1r2r3r4-0000-1111-2222-333344445555\",\n  \"emotion\": \"joy\",\n  \"intention\": \"maintain\",\n  \"version\": 1,\n  \"params_json\": {\n    \"energy\": [\n      0.7,\n      1.0\n    ],\n    \"valence\": [\n      0.6,\n      1.0\n    ],\n    \"tempo\": [\n      110,\n      150\n    ],\n    \"genres\": [\n      \"pop\",\n      \"dance\"\n    ]\n  },\n  \"is_active\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "List Rules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mood-map-rules?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mood-map-rules?limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter Rules (emotion,intention)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mood-map-rules?emotion=joy&intention=maintain&limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mood-map-rules?emotion=joy&intention=maintain&limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Rule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mood-map-rules/{{rule_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mood-map-rules",
+                "{{rule_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Rule (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mood-map-rules/{{rule_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mood-map-rules",
+                "{{rule_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": 2,\n  \"params_json\": {\n    \"energy\": [\n      0.6,\n      0.95\n    ],\n    \"valence\": [\n      0.55,\n      1.0\n    ],\n    \"tempo\": [\n      105,\n      145\n    ],\n    \"genres\": [\n      \"pop\",\n      \"dance\",\n      \"house\"\n    ]\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Rule",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mood-map-rules/{{rule_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "mood-map-rules",
+                "{{rule_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "Create Audit Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/audit-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "audit-logs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actor_type\": \"system\",\n  \"actor_id\": null,\n  \"action\": \"PLAYLIST_CREATED\",\n  \"entity_type\": \"playlist\",\n  \"entity_id\": \"c1c2c3d4-eeee-ffff-0000-999988887777\",\n  \"payload_json\": {\n    \"status\": \"ok\",\n    \"provider\": \"spotify\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/audit-logs?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "audit-logs?limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Audit Log by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/audit-logs/{{audit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "audit-logs",
+                "{{audit_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Audit Log (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/audit-logs/{{audit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "audit-logs",
+                "{{audit_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"PLAYLIST_CREATED_RETRY\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Audit Log",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/audit-logs/{{audit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "audit-logs",
+                "{{audit_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OAuth Tokens",
+      "item": [
+        {
+          "name": "Create/Upsert Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/oauth-tokens",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "oauth-tokens"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token_id\": \"t1t2t3t4-aaaa-bbbb-cccc-ddddeeeeffff\",\n  \"user_id\": \"7ea2d78c-7c9f-4b37-8ad8-1d8a9c5d1f0a\",\n  \"provider\": \"spotify\",\n  \"access_cipher_b64\": \"BASE64_CIPHERTEXT_HERE\",\n  \"refresh_cipher_b64\": \"BASE64_CIPHERTEXT_REFRESH\",\n  \"expires_at\": \"2025-12-31 23:59:59\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Tokens",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/oauth-tokens?limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "oauth-tokens?limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter Tokens (user,provider)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/oauth-tokens?user_id={{user_id}}&provider=spotify&limit=20&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "oauth-tokens?user_id={{user_id}}&provider=spotify&limit=20&offset=0"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Token by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/oauth-tokens/{{token_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "oauth-tokens",
+                "{{token_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Token (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/oauth-tokens/{{token_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "oauth-tokens",
+                "{{token_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expires_at\": \"2026-01-31 23:59:59\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Token",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/oauth-tokens/{{token_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "oauth-tokens",
+                "{{token_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

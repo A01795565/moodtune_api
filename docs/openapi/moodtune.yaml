@@ -143,6 +143,47 @@ paths:
         "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /sessions/login:
+    post:
+      tags: [Sessions]
+      summary: Login con email y contraseña
+      operationId: loginSession
+      # Público, sin autenticación previa
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                device_info: { type: string }
+                ip_hash: { type: string }
+              required: [email, password]
+            examples:
+              default: { value: { email: "user@example.com", password: "hunter2", device_info: "Chrome/Win", ip_hash: "abc123" } }
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id: { type: string, format: uuid }
+                  user:
+                    type: object
+                    properties:
+                      user_id: { type: string, format: uuid }
+                      display_name: { type: string }
+                      email_hash: { type: string }
+                required: [session_id, user]
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: Credenciales inválidas, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "423": { description: Cuenta bloqueada temporalmente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     get:
       tags: [Sessions]
       summary: Listar sesiones

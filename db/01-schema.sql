@@ -11,6 +11,26 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY ux_users_email_hash (email_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- USER CREDENTIALS (local email/password auth)
+CREATE TABLE IF NOT EXISTS user_credentials (
+  credential_id     CHAR(36)        NOT NULL,
+  user_id           CHAR(36)        NOT NULL,
+  email             VARCHAR(255)    NOT NULL,
+  password_salt     VARBINARY(64)   NOT NULL,
+  password_hash     VARBINARY(128)  NOT NULL,
+  failed_attempts   INT             NOT NULL DEFAULT 0,
+  locked_until      TIMESTAMP       NULL,
+  last_login_at     TIMESTAMP       NULL,
+  created_at        TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (credential_id),
+  UNIQUE KEY ux_credentials_email (email),
+  UNIQUE KEY ux_credentials_user (user_id),
+  CONSTRAINT fk_credentials_user
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- SESSIONS
 CREATE TABLE IF NOT EXISTS sessions (
   session_id        CHAR(36)       NOT NULL,

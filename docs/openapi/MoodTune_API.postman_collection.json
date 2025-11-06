@@ -153,6 +153,44 @@
       "name": "Sessions",
       "item": [
         {
+          "name": "Login (email/password)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sessions/login",
+              "host": [ "{{base_url}}" ],
+              "path": [ "sessions", "login" ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{login_email}}\",\n  \"password\": \"{{login_password}}\",\n  \"device_info\": \"Chrome/Win\",\n  \"ip_hash\": \"abc123\"\n}"
+            },
+            "description": "Authenticate user and create a session"
+          }
+        },
+        {
+          "name": "Login (invalid credentials)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sessions/login",
+              "host": [ "{{base_url}}" ],
+              "path": [ "sessions", "login" ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{login_email}}\",\n  \"password\": \"{{login_password_wrong}}\",\n  \"device_info\": \"Chrome/Win\",\n  \"ip_hash\": \"abc123\"\n}"
+            },
+            "description": "Expect 401 for wrong password"
+          }
+        },
+        {
           "name": "Create Session",
           "request": {
             "method": "POST",
@@ -980,6 +1018,107 @@
                 "oauth-tokens",
                 "{{token_id}}"
               ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Credentials",
+      "item": [
+        {
+          "name": "Create Credential",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user-credentials",
+              "host": ["{{base_url}}"],
+              "path": ["user-credentials"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"credential_id\": \"c1c2c3c4-aaaa-bbbb-cccc-ddddeeeeffff\",\n  \"user_id\": \"{{user_id}}\",\n  \"email\": \"{{login_email}}\",\n  \"password\": \"{{login_password}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Credentials",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user-credentials?limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["user-credentials?limit=20&offset=0"]
+            }
+          }
+        },
+        {
+          "name": "Get Credential by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user-credentials/{{credential_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["user-credentials", "{{credential_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Credential (change password)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user-credentials/{{credential_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["user-credentials", "{{credential_id}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_password\": \"NewStrongPass1!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Unlock Credential (reset lock)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user-credentials/{{credential_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["user-credentials", "{{credential_id}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reset_lock\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Credential",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user-credentials/{{credential_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["user-credentials", "{{credential_id}}"]
             }
           }
         }

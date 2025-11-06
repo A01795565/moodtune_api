@@ -1,9 +1,100 @@
 from flask import Blueprint, jsonify, request
 from ..src.db import get_conn
-from ..src.utils import row_to_dict, validate_uuid_or_none, parse_iso_timestamp, clamp_pagination
+from ..src.utils import (
+    row_to_dict,
+    validate_uuid_or_none,
+    parse_iso_timestamp,
+    clamp_pagination,
+    normalize_email,
+    email_sha256_hex,
+    verify_password,
+)
 import uuid
 
 bp = Blueprint("sessions", __name__)
+
+@bp.post("/login")
+def login():
+    try:
+        p = request.get_json(force=True) or {}
+        email = normalize_email(p.get("email"))
+        password = p.get("password")
+        device_info = p.get("device_info")
+        ip_hash = p.get("ip_hash")
+
+        if not email or not isinstance(password, str) or password == "":
+            return jsonify({"error": "Email y contraseña requeridos"}), 400
+
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT user_id, password_salt, password_hash, failed_attempts, locked_until FROM user_credentials WHERE email = %s",
+                (email,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "Credenciales inválidas"}), 401
+
+            user_id, salt, pw_hash, failed_attempts, locked_until = row
+
+            # Check lock
+            if locked_until is not None:
+                cur.execute("SELECT NOW() < %s", (locked_until,))
+                is_locked = cur.fetchone()[0]
+                if is_locked:
+                    return jsonify({"error": "Cuenta bloqueada temporalmente"}), 423
+
+            ok = verify_password(password, salt, pw_hash)
+            if not ok:
+                new_failed = int(failed_attempts or 0) + 1
+                # Lock after 5 failed attempts for 15 minutes
+                if new_failed >= 5:
+                    cur.execute(
+                        "UPDATE user_credentials SET failed_attempts = 0, locked_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE email = %s",
+                        (email,),
+                    )
+                else:
+                    cur.execute(
+                        "UPDATE user_credentials SET failed_attempts = %s WHERE email = %s",
+                        (new_failed, email),
+                    )
+                conn.commit()
+                return jsonify({"error": "Credenciales inválidas"}), 401
+
+            # Successful login: reset counters and update last_login_at
+            cur.execute(
+                "UPDATE user_credentials SET failed_attempts = 0, locked_until = NULL, last_login_at = NOW() WHERE email = %s",
+                (email,),
+            )
+
+            # Ensure users.email_hash is populated
+            cur.execute("SELECT email_hash, display_name FROM users WHERE user_id = %s", (user_id,))
+            urow = cur.fetchone()
+            display_name = None
+            email_hash = None
+            if urow:
+                email_hash, display_name = urow
+                if not email_hash:
+                    email_hash = email_sha256_hex(email)
+                    cur.execute("UPDATE users SET email_hash = %s WHERE user_id = %s", (email_hash, user_id))
+
+            # Create session
+            session_id = str(uuid.uuid4())
+            cur.execute(
+                "INSERT INTO sessions (session_id, user_id, device_info, ip_hash) VALUES (%s, %s, %s, %s)",
+                (session_id, user_id, device_info, ip_hash),
+            )
+            conn.commit()
+
+        return jsonify({
+            "session_id": session_id,
+            "user": {
+                "user_id": user_id,
+                "display_name": display_name,
+                "email_hash": email_hash,
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @bp.post("")
 def create():

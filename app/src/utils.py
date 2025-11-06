@@ -1,6 +1,8 @@
 import uuid
-from datetime import datetime
-from typing import Any, Dict, List
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Tuple
+import os
+import hashlib
 
 def validate_uuid_or_none(value, field_name: str):
     if value is None:
@@ -30,3 +32,30 @@ def clamp_pagination(limit, offset, max_limit=100):
 
 def row_to_dict(row: tuple, cols: List[str]) -> Dict[str, Any]:
     return {col: row[i] for i, col in enumerate(cols)}
+
+def normalize_email(email: str) -> str:
+    if email is None:
+        return None
+    return str(email).strip().lower()
+
+def email_sha256_hex(email: str) -> str:
+    e = normalize_email(email)
+    if not e:
+        return None
+    return hashlib.sha256(e.encode('utf-8')).hexdigest()
+
+def hash_password(password: str, salt: bytes = None, iterations: int = 200_000) -> Tuple[bytes, bytes]:
+    if not isinstance(password, str) or password == "":
+        raise ValueError("Contraseña inválida")
+    if salt is None:
+        salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, iterations)
+    return salt, dk
+
+def verify_password(password: str, salt: bytes, expected_hash: bytes, iterations: int = 200_000) -> bool:
+    try:
+        _, dk = hash_password(password, salt=salt, iterations=iterations)
+        # Constant-time compare
+        return hashlib.compare_digest(dk, expected_hash)
+    except Exception:
+        return False

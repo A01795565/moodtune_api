@@ -1,4 +1,8 @@
 from flask import Flask, jsonify
+try:
+    from flask_cors import CORS
+except Exception:
+    CORS = None
 from .src.config import Config
 from .src.db import init_db_pool, ping
 from .routes.users import bp as users_bp
@@ -13,6 +17,11 @@ from .routes.user_credentials import bp as user_credentials_bp
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # Habilitar CORS si está disponible
+    if CORS:
+        origins = Config.CORS_ORIGINS if hasattr(Config, 'CORS_ORIGINS') else '*'
+        CORS(app, resources={r"/*": {"origins": origins}}, supports_credentials=True)
 
     # Init DB pool
     init_db_pool()

@@ -13,6 +13,7 @@ import uuid
 
 bp = Blueprint("sessions", __name__)
 
+
 @bp.post("/login")
 def login():
     try:
@@ -36,7 +37,7 @@ def login():
 
             user_id, salt, pw_hash, failed_attempts, locked_until = row
 
-            # Check lock
+            # Verificación de bloqueo
             if locked_until is not None:
                 cur.execute("SELECT NOW() < %s", (locked_until,))
                 is_locked = cur.fetchone()[0]
@@ -46,7 +47,7 @@ def login():
             ok = verify_password(password, salt, pw_hash)
             if not ok:
                 new_failed = int(failed_attempts or 0) + 1
-                # Lock after 5 failed attempts for 15 minutes
+                # Bloqueo tras 5 intentos fallidos por 15 minutos
                 if new_failed >= 5:
                     cur.execute(
                         "UPDATE user_credentials SET failed_attempts = 0, locked_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE email = %s",
@@ -60,13 +61,13 @@ def login():
                 conn.commit()
                 return jsonify({"error": "Credenciales inválidas"}), 401
 
-            # Successful login: reset counters and update last_login_at
+            # Login exitoso: reset de contadores y last_login_at
             cur.execute(
                 "UPDATE user_credentials SET failed_attempts = 0, locked_until = NULL, last_login_at = NOW() WHERE email = %s",
                 (email,),
             )
 
-            # Ensure users.email_hash is populated
+            # Asegurar users.email_hash poblado
             cur.execute("SELECT email_hash, display_name FROM users WHERE user_id = %s", (user_id,))
             urow = cur.fetchone()
             display_name = None
@@ -77,7 +78,7 @@ def login():
                     email_hash = email_sha256_hex(email)
                     cur.execute("UPDATE users SET email_hash = %s WHERE user_id = %s", (email_hash, user_id))
 
-            # Create session
+            # Crear sesión
             session_id = str(uuid.uuid4())
             cur.execute(
                 "INSERT INTO sessions (session_id, user_id, device_info, ip_hash) VALUES (%s, %s, %s, %s)",
@@ -96,6 +97,7 @@ def login():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
 @bp.post("")
 def create():
     try:
@@ -113,6 +115,7 @@ def create():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
 @bp.get("")
 def list_():
     try:
@@ -125,6 +128,7 @@ def list_():
         return jsonify({"items": [row_to_dict(r, cols) for r in rows], "limit": limit, "offset": offset}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
 
 @bp.get("/<session_id>")
 def get_one(session_id):
@@ -139,6 +143,7 @@ def get_one(session_id):
         return jsonify(row_to_dict(row, cols)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
 
 @bp.patch("/<session_id>")
 def update(session_id):
@@ -172,6 +177,7 @@ def update(session_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
 @bp.delete("/<session_id>")
 def delete(session_id):
     try:
@@ -184,3 +190,4 @@ def delete(session_id):
         return jsonify({"deleted": True, "session_id": session_id}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+

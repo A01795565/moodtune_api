@@ -15,6 +15,8 @@ class Config:
     DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
 
     DEBUG = os.getenv("DEBUG", "true").lower() == "true"
+    # CORS
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
 
     # Bandera para impedir borrar logs de auditoría en producción
     ALLOW_AUDIT_DELETE = os.getenv("ALLOW_AUDIT_DELETE", "false").lower() == "true"

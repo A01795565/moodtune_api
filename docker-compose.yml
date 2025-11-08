@@ -16,7 +16,7 @@ services:
       - ./db/00-create-db-and-user.sql:/docker-entrypoint-initdb.d/00-create-db-and-user.sql:ro
       - ./db/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -prootpass || exit 1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${DB_ROOT_PASSWORD} || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10

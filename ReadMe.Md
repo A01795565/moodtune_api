@@ -1,121 +1,66 @@
-# MoodTune Project
+MoodTune API (Flask + MySQL)
 
-**MoodTune API** es un servicio backend modular y escalable desarrollado en **Flask (Python)** con conexión a **MySQL**.  
-Su propósito es actuar como núcleo relacional dentro de una arquitectura híbrida (RDBMS + BaaS/objeto) para el sistema **MoodTune**, que combina Inteligencia Artificial y música en streaming para generar experiencias personalizadas según el estado emocional del usuario.
+Backend modular y escalable desarrollado en Flask (Python) con conexión a MySQL. Actúa como núcleo relacional dentro de la arquitectura de MoodTune (RDBMS + servicios externos) y expone endpoints CRUD y utilitarios.
 
----
+Características
+- Arquitectura modular basada en Blueprints.
+- Endpoints CRUD para: `users`, `sessions`, `inferences`, `playlists`, `mood_map_rules`, `audit_logs`, `oauth_tokens`, `user-credentials`.
+- Conexión a MySQL mediante pool y validaciones (UUID, fechas, tipos).
+- Respuestas JSON consistentes y manejo centralizado de errores.
+- CORS configurable y preparado para Docker.
 
-## Características principales
+Estructura (resumen)
+- `app/__init__.py` App factory, CORS, health y registro de blueprints.
+- `app/src/{config,db,utils}.py` Configuración, pool MySQL y utilidades.
+- `app/routes/*.py` Blueprints por recurso.
+- `db/*.sql` Scripts de creación de DB y esquema.
+- `docs/openapi/moodtune.yaml` Especificación del API + colecciones Postman.
 
-- Arquitectura **modular basada en Blueprints**.
-- Endpoints **CRUD completos** para los módulos:
-  - `users`
-  - `sessions`
-  - `inferences`
-  - `playlists`
-  - `mood_map_rules`
-  - `audit_logs`
-  - `oauth_tokens`
-- Conexión a **MySQL mediante pool de conexiones**.
-- **Validaciones de UUID**, formato de fecha y tipos de datos.
-- **Respuestas JSON** estandarizadas y manejo de errores.
-- Preparado para despliegue en **entornos de desarrollo o producción**.
-- **Cumple principios de seguridad** (deny-by-default, cifrado, trazabilidad).
+OpenAPI y Postman
+- OpenAPI: `moodtune_api/docs/openapi/moodtune.yaml`
+- Postman: `moodtune_api/docs/openapi/MoodTune_API.postman_collection.json`
+- Entorno: `moodtune_api/docs/openapi/MoodTune_Local.postman_environment.json`
 
----
-
-## Estructura del proyecto
+Requisitos (venv)
 ```
-.
-moodtune/
-├─ moodtune_api/
-│  ├─ __init__.py               # app factory y registro de blueprints
-│  ├─ src/
-│  │  ├─ config.py              # config central (DB, pool, flags)
-│  │  ├─ db.py                  # pool MySQL y helpers de conexión
-│  │  └─ utils.py               # validación UUID, parsing fechas, helpers
-│  └─ routes/
-│     ├─ users.py               # Servicios Web para la tabla de usuarios
-│     ├─ sessions.py            # Servicios Web para la tabla de sesiones
-│     ├─ inferences.py          # Servicios Web para la tabla de inferencias
-│     ├─ playlists.py           # Servicios Web para la tabla de playlists
-│     ├─ mood_map_rules.py      # Servicios Web para la tabla de mapeo de estado de animo
-│     ├─ audit_logs.py          # Servicios Web para la tabla de logs de auditoria
-│     └─ oauth_tokens.py        # Servicios Web para la tabla de tokens oauth
-├─ run.py                       # punto de entrada Flask (usa create_app)
-├─ requirements.txt             # Librerias necesarias para el proyecto
-├─ Dockerfile                   # Archivo Dockerfile
-├─ docker-compose.yml           # Archivo Docker compose
-├─ .dockerignore                # Archivo Dockerignore
-├─ docs/
-│  └─ openapi/
-│     ├─ moodtune.yaml          # OpenAPI 3.0.3  
-│     └─ postman_collection.json
-└─ db/
-   ├─ 00-create-db-and-user.sql # Scirpt SQL para crear base de datos y usuario
-   └─ 01-schema.sql             # Script SQL para crear esquema de las tablas de base de datos
-
-```
-
-## Requisitos
-```bash
-python -m venv .venv 
-
-# Linux/Mac:
-# source .venv/bin/activate  
-
-# Windows: 
-.venv\Scripts\activate
-
-# Actualizar pip
-python.exe -m pip install --upgrade pip
-
-# Instalar librerias desde requirements.txt
+python -m venv .venv
+# Linux/Mac: source .venv/bin/activate
+# Windows:   .venv\Scripts\activate
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-
-# En caso de reinstalar las libreria
-# pip install --upgrade --force-reinstall -r requirements.txt
-# (opcional) conda: conda env create -f environment.yml
-```
-
-## Primeros pasos
-```bash
-cd project
-
 python run.py
 ```
+Health: `curl http://127.0.0.1:8000/health`
 
-### Correr Contenedor Docker
-```bash
-# Construir e iniciar servicios
-docker compose up --build
+Docker Compose
+1) Copia `.env.example` a `.env` y ajusta valores.
+2) `docker compose up --build`
+3) API: `http://localhost:8000`
 
-# (opcional en segundo plano)
-# docker compose up --build -d
-
-# Espera a que el servicio 'db' esté healthy (compose lo hace)
-# La API arrancará automáticamente después
-
-# Health API
-curl http://127.0.0.1:8000/health
-
-# Reconstruir sólo la API tras cambios
+Comandos útiles
+```
+# Reconstruir solo la API tras cambios
 docker compose up -d --build api
 
 # Logs
 docker compose logs -f db
 docker compose logs -f api
 
-# Detener Docker
+# Detener
 docker compose down
 ```
 
-### Acceso a la Base de Datos
-```bash
-# Conexión desde tu máquina host
+Acceso a MySQL
+```
+# Desde el host
 mysql -h 127.0.0.1 -P 3310 -u moodTuneTest -p
 
-# Conexión desde dentro del contenedor api
+# Dentro del contenedor de la API (host=db, puerto interno 3306)
 docker exec -it moodtune_api bash
 mysql -h db -P 3306 -u moodTuneTest -p
 ```
+
+Notas
+- No comprometas credenciales reales; usa `.env.example` como referencia.
+- Ajusta CORS con `CORS_ORIGINS` según tu entorno.
+

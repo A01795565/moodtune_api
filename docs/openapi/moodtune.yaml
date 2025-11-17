@@ -38,6 +38,7 @@ tags:
   - name: MoodMapRules
   - name: AuditLogs
   - name: OAuthTokens
+  - name: UserCredentials
 
 paths:
   /health:
@@ -554,6 +555,197 @@ paths:
       responses:
         "200": { description: Eliminado, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
         "404": { description: No encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /oauth-tokens/valid/{userId}/{provider}:
+    get:
+      tags: [OAuthTokens]
+      summary: Obtener token válido (con refresco automático)
+      operationId: getValidOAuthToken
+      description: |
+        Obtiene un token de acceso válido para el usuario y proveedor especificado.
+        Si el token está expirado (con buffer de 5 minutos), lo refresca automáticamente
+        usando el servicio de música y actualiza la base de datos.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: Identificador de usuario
+        - name: provider
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/MusicProvider" }
+          description: Proveedor musical
+      responses:
+        "200":
+          description: Token válido (posiblemente refrescado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  provider: { $ref: "#/components/schemas/MusicProvider" }
+                  access_token: { type: string, description: Token de acceso descifrado }
+                  expires_at: { type: string, format: date-time }
+                  was_refreshed: { type: boolean, description: Indica si el token fue refrescado }
+                required: [provider, access_token, expires_at, was_refreshed]
+        "404": { description: Token no encontrado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "500": { description: Token corrupto en BD, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "501": { description: Refresh no implementado para este proveedor, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "502": { description: No se pudo refrescar el token, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /user-credentials:
+    post:
+      tags: [UserCredentials]
+      summary: Crear credenciales de usuario (email + contraseña)
+      operationId: createUserCredential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                credential_id: { type: string, format: uuid }
+                user_id: { type: string, format: uuid }
+                email: { type: string, format: email }
+                password: { type: string, format: password, description: Contraseña en texto plano (se hasheará con PBKDF2) }
+              required: [user_id, email, password]
+            examples:
+              default:
+                value: { user_id: "7ea2d78c-7c9f-4b37-8ad8-1d8a9c5d1f0a", email: "user@example.com", password: "securepassword123" }
+      responses:
+        "201":
+          description: Credenciales creadas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credential_id: { type: string, format: uuid }
+                  user_id: { type: string, format: uuid }
+                  email: { type: string, format: email }
+                required: [credential_id, user_id, email]
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    get:
+      tags: [UserCredentials]
+      summary: Listar credenciales
+      operationId: listUserCredentials
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: user_id
+          in: query
+          required: false
+          description: Filtra por usuario
+          schema: { type: string, format: uuid }
+        - name: email
+          in: query
+          required: false
+          description: Filtra por email (se normaliza automáticamente)
+          schema: { type: string, format: email }
+      responses:
+        "200":
+          description: Lista paginada de credenciales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        credential_id: { type: string, format: uuid }
+                        user_id: { type: string, format: uuid }
+                        email: { type: string, format: email }
+                        failed_attempts: { type: integer, minimum: 0 }
+                        locked_until: { type: string, format: date-time, nullable: true }
+                        last_login_at: { type: string, format: date-time }
+                        created_at: { type: string, format: date-time }
+                        updated_at: { type: string, format: date-time }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+
+  /user-credentials/{credentialId}:
+    get:
+      tags: [UserCredentials]
+      summary: Obtener credencial por ID
+      operationId: getUserCredential
+      parameters:
+        - name: credentialId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: Identificador de credencial
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  credential_id: { type: string, format: uuid }
+                  user_id: { type: string, format: uuid }
+                  email: { type: string, format: email }
+                  failed_attempts: { type: integer, minimum: 0 }
+                  locked_until: { type: string, format: date-time, nullable: true }
+                  last_login_at: { type: string, format: date-time }
+                  created_at: { type: string, format: date-time }
+                  updated_at: { type: string, format: date-time }
+        "404": { description: Credencial no encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    patch:
+      tags: [UserCredentials]
+      summary: Actualizar credenciales parcialmente
+      operationId: patchUserCredential
+      parameters:
+        - name: credentialId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: Identificador de credencial
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email, description: Nuevo email (se normaliza) }
+                new_password: { type: string, format: password, description: Nueva contraseña }
+                reset_lock: { type: boolean, description: Si es true, resetea bloqueos }
+                locked_until: { type: string, format: date-time, nullable: true, description: Establecer bloqueo manual }
+      responses:
+        "200": { description: Actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateAck" } } } }
+        "400": { description: Petición inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { description: Credencial no encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    delete:
+      tags: [UserCredentials]
+      summary: Eliminar credenciales
+      operationId: deleteUserCredential
+      parameters:
+        - name: credentialId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: Identificador de credencial
+      responses:
+        "200": { description: Eliminada, content: { application/json: { schema: { $ref: "#/components/schemas/DeleteAck" } } } }
+        "404": { description: Credencial no encontrada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "401": { description: No autenticado, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "403": { description: Prohibido, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
 
